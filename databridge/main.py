@@ -2,6 +2,7 @@ import click
 
 from databridge.storage.connection_store import ConnectionStore
 from databridge.services.connection_service import ConnectionService
+from databridge.model.connection_type import ConnectionType
 
 
 store = ConnectionStore()
@@ -15,10 +16,21 @@ def cli():
 
 @cli.command()
 @click.option("--name", required=True)
-@click.option("--path", required=True)
-def create_connection(name, path):
+@click.option("--type", required=True)
+@click.option("--path", default=".")
+@click.option("--host", default="localhost")
+@click.option("--port", default=8888)
+@click.option("--user", default="testuser")
+@click.option("--password", default="testpwd")
+def create_connection(name, type, path, host, port, user, password):
 
-    service.create_local_connection(name, path)
+    params = {}
+    if type == ConnectionType.LOCAL.value:
+        params = {"path" : path}
+    elif type == ConnectionType.SFTP.value:
+        params = {"host": host, "port": port, "user": user, "password": password}
+    
+    service.create_connection(name, type, params)
 
     click.echo(
         f"Connection '{name}' created"

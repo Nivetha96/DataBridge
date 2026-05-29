@@ -29,16 +29,14 @@ class ConnectionStore:
     ):
         cursor = self.conn.cursor()
 
-        cursor.execute("""
-            INSERT INTO connections(name, type, config)
-            VALUES (?, ?, ?)
-        """, (
-            name,
-            connection_type,
-            json.dumps(config)
-        ))
-
-        self.conn.commit()
+        try:
+            cursor.execute("""
+                INSERT INTO connections(name, type, config)
+                VALUES (?, ?, ?)
+            """, (name,connection_type,json.dumps(config)))
+            self.conn.commit()
+        except sqlite3.IntegrityError:
+            raise ValueError(f"Connection '{name}' already exists")
 
     def get_connection(self, name: str):
         cursor = self.conn.cursor()
