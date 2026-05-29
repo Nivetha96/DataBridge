@@ -2,12 +2,12 @@ import click
 
 from databridge.storage.connection_store import ConnectionStore
 from databridge.services.connection_service import ConnectionService
+from databridge.services.transfer_service import TransferService
 from databridge.model.connection_type import ConnectionType
 
-
 store = ConnectionStore()
-service = ConnectionService(store)
-
+connection_service = ConnectionService(store)
+transfer_service = TransferService(connection_service)
 
 @click.group()
 def cli():
@@ -41,7 +41,7 @@ def create_connection(name, type, path, host, port, user, password):
 @click.option("--connection", required=True)
 def list(connection):
 
-    connector = service.load_connector(connection)
+    connector = connection_service.load_connector(connection)
 
     files = connector.list_files()
 
@@ -54,7 +54,7 @@ def list(connection):
 @click.option("--file", "file_name", required=True)
 def head(connection, file_name):
 
-    connector = service.load_connector(connection)
+    connector = connection_service.load_connector(connection)
 
     data = connector.read_file(file_name)
 
@@ -65,6 +65,43 @@ def head(connection, file_name):
     for line in lines:
         click.echo(line)
         
-        
+
+@cli.command()
+@click.option("--source", required=True)
+@click.option("--source-file", required=True)
+@click.option("--destination", required=True)
+@click.option("--destination-file", required=True)
+def transfer(
+    source,
+    source_file,
+    destination,
+    destination_file
+):
+
+    result = transfer_service.transfer(
+        source,
+        source_file,
+        destination,
+        destination_file
+    )
+
+    click.echo(
+        f"Transfer completed successfully"
+    )
+
+    click.echo(
+        f"Bytes transferred: "
+        f"{result['bytes_transferred']}"
+    )
+
+    click.echo(
+        f"Started: {result['started_at']}"
+    )
+
+    click.echo(
+        f"Completed: {result['completed_at']}"
+    )
+    
+    
 if __name__ == "__main__":
     cli()
