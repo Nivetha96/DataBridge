@@ -1,0 +1,17 @@
+ [project]
+ name = "databridge"
+ version = "0.1.0"
+ description = "Data integration toolkit"
+ requires-python = ">=3.10"
+
+ dependencies = [
+     "click",
+     "paramiko"
+ ]
+
+ [project.scripts]
+ databridge = "databridge.main:cli"
+
+ [build-system]
+ requires = ["hatchling"]
+ build-backend = "hatchling.build"
