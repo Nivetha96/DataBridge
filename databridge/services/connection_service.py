@@ -10,9 +10,7 @@ class ConnectionService:
         name: str,
         type: str,
         params: dict
-    ):
-            config=params
-        
+    ):        
         self.store.save_connection(name=name, connection_type=type, config=params)
         
     def load_connector(self, connection_name: str):
