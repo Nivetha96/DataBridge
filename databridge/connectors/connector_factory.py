@@ -4,33 +4,35 @@ from databridge.connectors.sftp_connector import SFTPConnector
 
 class ConnectorFactory:
 
+    _builders = {
+        "local": lambda config: LocalConnector(
+            config["path"]
+        ),
+        "sftp": lambda config: SFTPConnector(
+            config["host"],
+            config["port"],
+            config["user"],
+            config["password"]
+        ),
+    }
+    
     @staticmethod
     def create_connection(connection):
-
         connection_type = connection["type"]
         config = connection["config"]
 
-        connectors = {
-            "local": lambda: LocalConnector(
-                config["path"]
-            ),
+        builder = ConnectorFactory._builders.get(connection_type)
 
-            "sftp": lambda: SFTPConnector(
-                config["host"],
-                config["port"],
-                config["user"],
-                config["password"]
-            )
-        }
-
-        connector_builder = connectors.get(
-            connection_type
-        )
-
-        if not connector_builder:
+        if builder is None:
+            supported = list(ConnectorFactory._builders)
             raise ValueError(
-                f"Unsupported connection type: "
-                f"{connection_type}"
+                f"Unsupported connection type: '{connection_type}'. "
+                f"Supported types: {supported}"
             )
 
-        return connector_builder()
+        return builder(config)
+        
+    @staticmethod
+    def check_health(connection):
+        connector = ConnectorFactory.create_connection(connection)
+        return connector.healthcheck()

@@ -6,8 +6,9 @@
 
  dependencies = [
      "click",
-     "paramiko"
- ]
+     "pandas>=2.3.3",
+     "paramiko",
+]
 
  [project.scripts]
  databridge = "databridge.main:cli"

@@ -1,9 +1,12 @@
 import click
-
+from pathlib import Path
+import pandas as pd
 from databridge.storage.connection_store import ConnectionStore
 from databridge.services.connection_service import ConnectionService
 from databridge.services.transfer_service import TransferService
 from databridge.model.connection_type import ConnectionType
+from databridge.model.file_type import FileType
+from databridge.util.schema_inference import infer_json_schema, infer_csv_schema
 
 store = ConnectionStore()
 connection_service = ConnectionService(store)
@@ -36,6 +39,11 @@ def create_connection(name, type, path, host, port, user, password):
         f"Connection '{name}' created"
     )
 
+@cli.command()
+@click.option("--connection", required=True)
+def check_health(connection):
+    result = connection_service.check_health(connection)
+    click.echo(result["message"])
 
 @cli.command()
 @click.option("--connection", required=True)
@@ -62,12 +70,30 @@ def head(connection, file_name):
 
     data = connector.read_file(file_name)
 
-    text = data.decode("utf-8")
+    ext = file_name.rsplit(".", 1)[-1].lower() if "." in file_name else ""
+    valid_extensions = [t.value for t in FileType]
+    if ext in valid_extensions:
+        _print_schema(data, ext)
 
-    lines = text.splitlines()[:5]
+def _print_schema(data: bytes, ext: str) -> None:
+    try:
+        fields = infer_csv_schema(data) if ext == FileType.CSV.value else infer_json_schema(data)
+    except (ValueError, Exception) as e:
+        raise click.ClickException(f"Schema inference failed: {e}")
 
-    for line in lines:
-        click.echo(line)
+    if not fields:
+        click.echo("(no fields found)")
+        return
+
+    # align columns for readability
+    col_w = max(len(f["column"]) for f in fields)
+    type_w = max(len(f["type"]) for f in fields)
+
+    click.echo(f"  {'COLUMN':<{col_w}}  {'TYPE':<{type_w}}  NULLABLE")
+    click.echo(f"  {'-'*col_w}  {'-'*type_w}  --------")
+    for f in fields:
+        nullable = "YES" if f["nullable"] else "no"
+        click.echo(f"  {f['column']:<{col_w}}  {f['type']:<{type_w}}  {nullable}")
         
 
 @cli.command()
