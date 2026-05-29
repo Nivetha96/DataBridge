@@ -20,7 +20,7 @@ class SFTPConnector(BaseConnector):
         self.sftp = paramiko.SFTPClient.from_transport(transport)
 
     def list_files(self):
-        return self.sftp.listdir(base_path)
+        return self.sftp.listdir(self.base_path)
 
     def get_full_path(self, file_path: str) -> str:
         return self.base_path + "/" + file_path

@@ -30,7 +30,7 @@ def create_connection(name, type, path, host, port, user, password):
     elif type == ConnectionType.SFTP.value:
         params = {"host": host, "port": port, "user": user, "password": password}
     
-    service.create_connection(name, type, params)
+    connection_service.create_connection(name, type, params)
 
     click.echo(
         f"Connection '{name}' created"
@@ -45,6 +45,10 @@ def list(connection):
 
     files = connector.list_files()
 
+    if not files:
+        click.echo("Folder is empty")
+        return
+        
     for file in files:
         click.echo(file)
 

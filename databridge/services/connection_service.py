@@ -1,5 +1,4 @@
-from databridge.connectors.local_connector import LocalConnector
-from databridge.connectors.sftp_connector import SFTPConnector
+from databridge.connectors.connector_factory import ConnectorFactory
 
 class ConnectionService:
 
@@ -12,12 +11,10 @@ class ConnectionService:
         type: str,
         params: dict
     ):
-        self.store.save_connection(
-            name=name,
-            connection_type=type,
             config=params
-        )
-
+        
+        self.store.save_connection(name=name, connection_type=type, config=params)
+        
     def load_connector(self, connection_name: str):
         connection = self.store.get_connection(
             connection_name
@@ -27,17 +24,5 @@ class ConnectionService:
             raise ValueError(
                 f"Connection '{connection_name}' not found"
             )
-
-        if connection["type"] == "local":
-            return LocalConnector(
-                connection["config"]["path"]
-            )
-        elif connection["type"] == "sftp":
-            return SFTPConnector(
-                connection["config"]["host"],
-                connection["config"]["port"],
-                connection["config"]["user"],
-                connection["config"]["password"],
-            )
-
-        raise ValueError("Unsupported connection type")
+            
+        return ConnectorFactory.create_connection(connection)
