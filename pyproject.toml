@@ -9,6 +9,7 @@
      "cryptography>=48.0.0",
      "pandas>=2.3.3",
      "paramiko",
+     "pytest>=9.0.3",
 ]
 
  [project.scripts]
