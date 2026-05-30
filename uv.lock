@@ -250,6 +250,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
+    { name = "cryptography" },
     { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pandas", version = "3.0.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "paramiko" },
@@ -258,6 +259,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "click" },
+    { name = "cryptography", specifier = ">=48.0.0" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "paramiko" },
 ]
