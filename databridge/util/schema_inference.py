@@ -4,8 +4,10 @@ import json
 import io
 from datetime import datetime
 from typing import Any
+from databridge.model.file_type import FileType
 
 SAMPLE_ROWS = 5
+
 
 def infer_type(values: list[str | Any]) -> str:
     """Infer the most specific type that fits all non-empty values."""
@@ -16,7 +18,14 @@ def infer_type(values: list[str | Any]) -> str:
         if v == "":
             continue  # nulls don't constrain the type
 
-        if "boolean" in candidates and v.lower() not in ("true", "false", "1", "0", "yes", "no"):
+        if "boolean" in candidates and v.lower() not in (
+            "true",
+            "false",
+            "1",
+            "0",
+            "yes",
+            "no",
+        ):
             candidates.discard("boolean")
 
         if "integer" in candidates:
@@ -42,14 +51,18 @@ def infer_type(values: list[str | Any]) -> str:
 
 
 _DATE_FORMATS = (
-    "%Y-%m-%d", "%Y/%m/%d", "%d-%m-%Y", "%d/%m/%Y",
-    "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S",
+    "%Y-%m-%d",
+    "%Y/%m/%d",
+    "%d-%m-%Y",
+    "%d/%m/%Y",
+    "%Y-%m-%dT%H:%M:%S",
+    "%Y-%m-%d %H:%M:%S",
 )
 
+
 def _is_date(value: str) -> bool:
-    return any(
-        _try_parse(value, fmt) for fmt in _DATE_FORMATS
-    )
+    return any(_try_parse(value, fmt) for fmt in _DATE_FORMATS)
+
 
 def _try_parse(value: str, fmt: str) -> bool:
     try:
@@ -57,6 +70,15 @@ def _try_parse(value: str, fmt: str) -> bool:
         return True
     except ValueError:
         return False
+
+
+def infer_schema(raw: bytes, file_type: FileType) -> list[dict]:
+    match file_type:
+        case FileType.CSV:
+            return infer_csv_schema(raw)
+        case FileType.JSON:
+            return infer_json_schema(raw)
+
 
 def infer_csv_schema(raw: bytes) -> list[dict]:
     """Return [{column, type, nullable}] from up to SAMPLE_ROWS of a CSV."""
@@ -82,13 +104,16 @@ def infer_csv_schema(raw: bytes) -> list[dict]:
         for col in columns
     ]
 
+
 def infer_json_schema(raw: bytes) -> list[dict]:
     """Return [{column, type, nullable}] from an array-of-objects JSON file."""
     text = raw.decode("utf-8", errors="replace")
     data = json.loads(text)
 
     if not isinstance(data, list):
-        raise ValueError("JSON schema inference requires an array-of-objects at the root")
+        raise ValueError(
+            "JSON schema inference requires an array-of-objects at the root"
+        )
     if not data:
         return []
 

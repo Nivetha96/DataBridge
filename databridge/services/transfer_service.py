@@ -7,35 +7,20 @@ class TransferService:
         self.connection_service = connection_service
 
     def transfer(
-        self,
-        source_connection,
-        source_file,
-        destination_connection,
-        destination_file
+        self, source_connection, source_file, destination_connection, destination_file
     ):
 
-        source_connector = (
-            self.connection_service.load_connector(
-                source_connection
-            )
-        )
+        source_connector = self.connection_service.load_connector(source_connection)
 
-        destination_connector = (
-            self.connection_service.load_connector(
-                destination_connection
-            )
+        destination_connector = self.connection_service.load_connector(
+            destination_connection
         )
 
         started_at = datetime.now()
 
-        data = source_connector.read_file(
-            source_file
-        )
+        data = source_connector.read_file(source_file)
 
-        destination_connector.write_file(
-            destination_file,
-            data
-        )
+        destination_connector.write_file(destination_file, data)
 
         completed_at = datetime.now()
 
@@ -44,5 +29,5 @@ class TransferService:
         return {
             "started_at": started_at,
             "completed_at": completed_at,
-            "bytes_transferred": bytes_transferred
+            "bytes_transferred": bytes_transferred,
         }

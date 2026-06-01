@@ -31,15 +31,9 @@ class SFTPConnector(BaseConnector):
     def healthcheck(self):
         try:
             self.sftp.listdir(self.base_path)
-            return {
-                "status": "healthy",
-                "message": "SFTP connection successful"
-            }
+            return {"status": "healthy", "message": "SFTP connection successful"}
         except Exception as e:
-            return {
-                "status": "unhealthy",
-                "message": str(e)
-            }
+            return {"status": "unhealthy", "message": str(e)}
 
     def close(self):
         if self.sftp:
@@ -54,14 +48,14 @@ class SFTPConnector(BaseConnector):
 
     def get_full_path(self, file_path: str) -> str:
         return posixpath.join(self.base_path, file_path)
-        
+
     def read_file(self, file_path: str) -> bytes:
         full_path = self.get_full_path(file_path)
         try:
             self.sftp.stat(full_path)
         except FileNotFoundError:
             raise FileNotFoundError(f"File does not exist: {full_path}")
-        
+
         with self.sftp.open(full_path, "rb") as f:
             return f.read()
 

@@ -2,95 +2,80 @@
 
 ## Overview
 
-Build a command-line toolkit called **DataBridge** for managing data connections and transferring files
-between them. The requirements are outlined belowed and broken into three phases already.
-Phase's 1 & 2 are required and expected to be completed, Phase 3 is optional.
-
-**Expectation:** We value quality over completeness -- it is better to finish Phases 1 and 2 well than
-to rush through all three phases. Use of AI tooling is acceptable, see [AI Tooling Section](#ai-tooling).
+Databridge is a command-line toolkit called for managing data connections and transferring files
+between them.
 
 ## Language
 
-**Python 3.10+**, **Ruby 3.0+**, and **Elixir 1.14+** are recommended, but choose whichever language you feel most comfortable with.
+**Python 3.11+**
 
-External libraries are allowed for SSH/SFTP connectivity, YAML/JSON parsing, and CLI frameworks. The core logic (connection management, adapter design, transfer orchestration) should be your own.
-
-## What We Provide
-
-- **`data/customers.csv`** -- a sample CSV file with 15 rows of customer data
-- **`data/products.json`** -- a sample JSON file with 6 product records
-- **`docker-compose.yml`** -- spins up a local SFTP server for testing
-
-### Setting Up the SFTP Server
-
-```bash
-docker compose up -d
-```
-
-This starts an SFTP server on **port 2222** with the following credentials:
-
-| Field    | Value      |
-|----------|------------|
-| Host     | localhost  |
-| Port     | 2222       |
-| Username | testuser   |
-| Password | testpass   |
-
-Files written to the SFTP server will appear in the `sftp_data/` directory on your local machine.
-
-You can verify the server is running:
-
-```bash
-sftp -P 2222 testuser@localhost
-```
-
-## What You Build
+## DataBridge Usage Example
 
 ### Phase 1: Connection Management + Local Filesystem Connector
 
-**Goal:** Establish the adapter pattern and build stateful connection management.
+Established the adapter pattern and built a stateful connection management.
 
-**Requirements:**
+**Requirements Satisfied:**
 
-1. Define a **connector interface** with at minimum these operations:
+1. Defined a **connector interface** with at minimum these operations:
    - `list` -- list available files in the connection
    - `read` -- read a file's contents from the connection
    - `write` -- write contents to a file in the connection
 
-2. Implement a **local filesystem connector** that operates on a directory path.
+2. Implemented a **local filesystem connector** that operates on a directory path.
 
-3. Build a **connection store** that persists connection configuration (name, type, and type-specific settings). Connections must survive across separate invocations of your program. You may use SQLite, a JSON file, or any persistent mechanism you choose.
+3. Built a **connection store** that persists connection configuration (name, type, and type-specific settings). The config details are encrypted using Fernet library.
 
-4. Support the following operations (CLI commands shown as examples -- you may design the interface however you like):
+4. Examples
 
 ```bash
 # Create a local filesystem connection
 databridge create-connection --name local_data --type local --path ./data
+# Output
+Connection 'local_data' created
+# DB Store
+NAME                 TYPE       CONFIG
+-------------------- ---------- ----------------------------------------
+local_data           local      gAAAAABqHQMxRUjAcjzPK9s1sc9Ax8**
 
 # List files available through a connection
 databridge list --connection local_data
-
+#Output 
+customers.csv
+products.json
 # Preview file content and infer schema (for CSV/JSON files)
 databridge head --connection local_data --file customers.csv
+# Output
+Displaying schema ->
+  COLUMN       TYPE     NULLABLE
+  -----------  -------  --------
+  id           integer  no
+  first_name   string   no
+  last_name    string   no
+  email        string   no
+  age          integer  no
+  signup_date  date     no
+  is_active    boolean  no
+  balance      float    no
+Displaying data ->
+id  first_name  last_name  email                     age  signup_date  is_active  balance
+--  ----------  ---------  ------------------------  ---  -----------  ---------  -------
+1   Alice       Chen       alice.chen@example.com    34   2023-06-15   true       1250.00
+2   Bob         Martinez   bob.martinez@example.com  28   2024-01-20   true       340.50 
+3   Carol       Johnson    carol.j@example.com       45   2022-11-03   false      0.00   
+4   David       Kim        david.kim@example.com     31   2023-09-08   true       890.75 
+5   Eve         Okafor     eve.okafor@example.com    27   2024-03-12   true       2100.00
 ```
-
-**Acceptance criteria:**
-
-- A clear connector interface exists
-- Local filesystem connector implements the interface
-- Connections persist across program invocations
-- `list` shows files in the connected directory
-- `head` displays the first several rows of a file
 
 ### Phase 2: SSH/SFTP Connector + Data Transfer
 
-**Goal:** Prove the adapter pattern works across connection types and build the transfer pipeline.
+**Goal:** Proved the adapter pattern works across connection types and built the transfer pipeline.
 
-**Requirements:**
+**Requirements Satisfied:**
 
-1. Implement an **SFTP connector** that connects to an SSH/SFTP server using stored credentials (host, port, username, password). It should conform to the same connector interface you defined in Phase 1, so the rest of the system can use it without knowing whether the underlying connection is local or remote.
+1. Implemented an **SFTP connector** that connects to an SSH/SFTP server using stored credentials (host, port, username, password). It uses the same connector interface defined in Phase 1.
 
-2. Build a **transfer** operation that reads a file from a source connection and writes it to a destination connection. The transfer should be **data-agnostic** -- it moves the file without inspecting or transforming the content.
+2. Built a **transfer** operation that reads a file from a source connection and writes it to a destination connection. The transfer should be **data-agnostic** -- it moves the file without inspecting or transforming the content.
 
 3. Track **transfer status** including: started/completed timestamps, bytes or rows transferred (logging is fine).
 
@@ -100,42 +85,45 @@ databridge head --connection local_data --file customers.csv
 # Create an SFTP connection
 databridge create-connection --name remote_server --type sftp \
   --host localhost --port 2222 --user testuser --password testpass
-
+# Output
+Connection 'remote_server' created
 # List files on the remote server
 databridge list --connection remote_server
-
+#Output
+customers.csv
+products.json
 # Transfer a file from local to SFTP
 databridge transfer \
   --source local_data --source-file customers.csv \
-  --destination remote_server --destination-file customers.csv
-
+  --destination remote_server --destination-file customers_from_local.csv
+#Output
+Transfer completed successfully
+Bytes transferred: 1006
+Started: 2026-06-01 00:34:13.438106
+Completed: 2026-06-01 00:34:13.441120
 # Transfer a file from SFTP back to local
 databridge transfer \
   --source remote_server --source-file customers.csv \
   --destination local_data --destination-file customers_from_remote.csv
+ #Output
+Transfer completed successfully
+Bytes transferred: 1006
+Started: 2026-06-01 00:34:36.414137
+Completed: 2026-06-01 00:34:36.420974 
 ```
 
-**Acceptance criteria:**
-
-- SFTP connector implements the same interface as the local connector
-- Transfers work bidirectionally (local to SFTP, SFTP to local)
-- Transfer status is reported (timestamps, size)
-- The transfer operation does not contain connector-specific logic (no `if type == "sftp"` branching)
-- Adding a new connector type would not require changes to the transfer logic
-- Connection failures (wrong credentials, server down) produce clear error messages
-
-### Phase 3: Head Utility + Polish (Optional)
+### Phase 3: Head Utility + Polish
 
 **Goal:** Build a useful schema preview tool and polish error handling.
 
-**Requirements:**
+**Requirements Satisfied:**
 
-1. Enhance the **head utility** to infer schema from structured file formats:
+1. Enhanced the **head utility** to infer schema from structured file formats:
    - For **CSV**: display column names and inferred types (string, integer, float, boolean, date)
    - For **JSON** (array-of-objects): display field names and inferred types
    - The head utility should work through **any connector** -- local or SFTP
 
-2. Polish **error handling** across the application:
+2. Polished **error handling** across the application:
    - Connection creation with invalid parameters gives clear feedback
    - SFTP connection failures produce actionable error messages
    - Transferring to/from a non-existent file is handled gracefully
@@ -143,23 +131,61 @@ databridge transfer \
 ```bash
 # Preview schema of a file on the SFTP server
 databridge head --connection remote_server --file customers.csv
+# Output
+Displaying schema ->
+  COLUMN       TYPE     NULLABLE
+  -----------  -------  --------
+  id           integer  no
+  first_name   string   no
+  last_name    string   no
+  email        string   no
+  age          integer  no
+  signup_date  date     no
+  is_active    boolean  no
+  balance      float    no
+Displaying data ->
+id  first_name  last_name  email                     age  signup_date  is_active  balance
+--  ----------  ---------  ------------------------  ---  -----------  ---------  -------
+1   Alice       Chen       alice.chen@example.com    34   2023-06-15   true       1250.00
+2   Bob         Martinez   bob.martinez@example.com  28   2024-01-20   true       340.50 
+3   Carol       Johnson    carol.j@example.com       45   2022-11-03   false      0.00   
+4   David       Kim        david.kim@example.com     31   2023-09-08   true       890.75 
+5   Eve         Okafor     eve.okafor@example.com    27   2024-03-12   true       2100.00
 ```
 
-**Acceptance criteria:**
-
-- Schema inference produces reasonable types for the provided sample data
-- Head utility works through both local and SFTP connections
-- Error messages help the user understand what went wrong and how to fix it
-
-### Bonus (Optional)
-
-These are genuinely optional. Completing any of them signals depth but is not expected:
+### Bonus Completed
 
 - Connection healthcheck command (verify credentials are valid without transferring data)
-- Streaming/lazy I/O so large files don't need to be fully loaded into memory
+```bash
+# Healthcheck
+ databridge check-health --connection local_data
+ # Output
+Local connection successful
+```
 - Encryption of stored credentials at rest
-- Additional connector types (e.g., S3)
+```bash
+ uv run tests/storage/test_connection_db.py
+ NAME                 TYPE       CONFIG
+-------------------- ---------- ----------------------------------------
+local_data           local      gAAAAAB***
+remote_server        sftp       gAAAAAB***
+```
 - Unit tests for the connector interface contract
+```bash
+uv run pytest
+========================test session starts ===========================
+platform darwin -- Python 3.11.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/nivethab/Documents/GitHub/databridge
+configfile: pyproject.toml
+collected 26 items                                                                                                                                       
+
+tests/connectors/test_connector_factory.py .... [ 15%]
+tests/connectors/test_local_connector.py ............[ 61%]
+tests/connectors/test_sftp_connector.py ..........[100%]
+
+============================= 26 passed in 0.31s ===========================
+
+```
 - A proper CLI framework (argparse/Click, OptionParser, Mix tasks)
 
 ## Submission
@@ -171,32 +197,7 @@ These are genuinely optional. Completing any of them signals depth but is not ex
   - What you would improve with more time
 - Commit history matters -- we'd like to see how you built it incrementally, not as a single commit
 
-## What We Value
+## Tool Used 
 
-In priority order:
-
-1. **Clean abstractions** -- a well-designed connector interface matters more than feature count
-2. **Working code** -- we will run your solution against the provided SFTP server
-3. **Stateful connections** -- connections should persist and be reusable
-4. **Thoughtful error handling** -- clear messages over silent failures
-5. **Code organization** -- sensible file/module structure for a growing project
-
-## Rules
-
-- Open book: use documentation, Stack Overflow, language references
-- AI tooling is allowed and expected. Please document your process and how you leverage AI tooling (see the AI Tooling section below).
-- External libraries are fine for SSH/SFTP, YAML parsing, and CLI frameworks
-
-## AI Tooling
-
-With the advent of agentic coding, we expect our engineers to leverage AI tooling and workflows, so using these for this take-home is allowed.
-However, we also expect that the code you submit is code you can explain in-depth and provide the reasoning for architectural decisions.
-
-In your project README, please include a section documenting:
-
-- **What tooling you used** (e.g., Claude Code, Cursor, Copilot, Gemini, ChatGPT, etc.)
-- **Your general process** for how you used it -- skills, agents, custom commands, workflows, etc.
-- **One or two example prompts** that illustrate how you collaborated with the tooling
-- **A short paragraph or two** explaining your overall approach
-
-We are not grading on whether or how much AI you used; we are grading on the quality of the code and your ability to reason about it.
+- Claude Code
+- Used to analyse on errors, look for better options available for encryption/decryption, implement test cases

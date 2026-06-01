@@ -5,17 +5,12 @@ from databridge.connectors.sftp_connector import SFTPConnector
 class ConnectorFactory:
 
     _builders = {
-        "local": lambda config: LocalConnector(
-            config["path"]
-        ),
+        "local": lambda config: LocalConnector(config["path"]),
         "sftp": lambda config: SFTPConnector(
-            config["host"],
-            config["port"],
-            config["user"],
-            config["password"]
+            config["host"], config["port"], config["user"], config["password"]
         ),
     }
-    
+
     @staticmethod
     def create_connection(connection):
         connection_type = connection["type"]
@@ -31,7 +26,7 @@ class ConnectorFactory:
             )
 
         return builder(config)
-        
+
     @staticmethod
     def check_health(connection):
         connector = ConnectorFactory.create_connection(connection)
