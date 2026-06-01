@@ -186,7 +186,6 @@ tests/connectors/test_sftp_connector.py ..........[100%]
 ============================= 26 passed in 0.31s ===========================
 
 ```
-- A proper CLI framework (argparse/Click, OptionParser, Mix tasks)
 
 ## Submission
 
